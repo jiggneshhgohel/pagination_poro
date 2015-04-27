@@ -46,3 +46,5 @@ Next Page: no_next_page
 Last Page: 3
 
 ```
+
+Please refer the rspecs for more examples.
