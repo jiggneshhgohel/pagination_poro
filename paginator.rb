@@ -27,6 +27,7 @@ class Paginator
     raise_error_if_value_not_an_integer_or_less_than_or_equal_to_0(per_page)
     @items_per_page = per_page
     @last_page = calculate_last_page
+    @next_page = calculate_next_page
   end
 
   private
@@ -48,6 +49,7 @@ class Paginator
   end
 
   def calculate_next_page
+    return if current_page.nil?
     return NO_NEXT_PAGE if current_page == last_page
     current_page + 1
   end
