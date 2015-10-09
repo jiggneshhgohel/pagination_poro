@@ -1,6 +1,10 @@
 require_relative '../paginator'
 
 describe Paginator do
+  def remove_constant(constant_symbol)
+    Object.send(:remove_const, constant_symbol)
+  end
+
   context "instance methods" do
     subject { Paginator.new(25) }
 
@@ -68,517 +72,325 @@ describe Paginator do
         Paginator.new(-1)
       }.to raise_error(/total_items argument value must be an integer greater than 0/)
     end
-
-    it "sets total_items attribute value to given total_items" do
-      paginator =  Paginator.new(25)
-      expect(paginator.total_items).to_not be_nil
-      expect(paginator.total_items).to eql(25)
-    end
-
-    it "sets items_per_page to a default value #{Paginator::DEFAULT_ITEMS_PER_PAGE}" do
-      paginator =  Paginator.new(25)
-      expect(paginator.items_per_page).to_not be_nil
-      expect(paginator.items_per_page).to eql(Paginator::DEFAULT_ITEMS_PER_PAGE)
-    end
-
-    it "sets current_page to a default value 1" do
-      paginator =  Paginator.new(1)
-      expect(paginator.current_page).to_not be_nil
-      expect(paginator.current_page).to eql(1)
-    end
-
-    it "sets current_page_first_item_offset to a default value 1" do
-      paginator =  Paginator.new(1)
-      expect(paginator.current_page_first_item_offset).to_not be_nil
-      expect(paginator.current_page_first_item_offset).to eql(1)
-    end
-
-    it "sets last_page attribute to an integer value calculated using total_items and items_per_page values" do
-      paginator =  Paginator.new(25)
-      expect(paginator.last_page).to_not be_nil
-      expect(paginator.last_page).to be_kind_of(Fixnum)
-    end
-
-    it "sets next_page attribute to an integer value calculated using current_page and last_page values" do
-      paginator =  Paginator.new(25)
-      expect(paginator.next_page).to_not be_nil
-      expect(paginator.next_page).to be_kind_of(Fixnum)
-    end
-  end
-
-  context "#current_page=" do
-    let(:paginator) { Paginator.new(25) }
-
-    it "raises error when value to be set is found nil" do
-      expect {
-        paginator.current_page = nil
-      }.to raise_error(/value must be an integer/)
-    end
-
-    it "raises error when value to be set is not found to be an integer value" do
-      expect {
-        paginator.current_page = "1"
-      }.to raise_error(/value must be an integer/)
-    end
-
-    it "raises error when value to be set is found 0(zero)" do
-      expect {
-        paginator.current_page = 0
-      }.to raise_error(/value must be an integer greater than 0/)
-    end
-
-    it "raises error when value to be set is found LESS THAN 0(zero)" do
-      expect {
-        paginator.current_page = -1
-      }.to raise_error(/value must be an integer greater than 0/)
-    end
-
-    it "correctly sets an accepted number" do
-      paginator.current_page = 2
-      expect(paginator.current_page).to eql(2)
-    end
-
-    it "sets next_page attribute to an integer value calculated using current_page and last_page values" do
-      paginator.current_page = 2
-      expect(paginator.next_page).to_not be_nil
-      expect(paginator.next_page).to be_kind_of(Fixnum)
-    end
-
-    context "when value to be set is found to be greater than last_page value" do
-      let(:total_items) { 25 }
-      let(:expected_last_page) { 3 } # considering default items_per_page
-      let(:current_page_to_be_set) { 4 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      before do
-        expect(paginator.last_page).to eql(expected_last_page)
-      end
-
-      it "raises invalid page number error" do
-        expect {
-          paginator.current_page = current_page_to_be_set
-        }.to raise_error(/Invalid page number \d+\. There are maximum \d+ pages/)
-      end
-    end
-
-    it "sets current_page_first_item_offset attribute to an integer value calculated using current_page and items_per_page values" do
-      paginator.current_page = 2
-      expect(paginator.current_page_first_item_offset).to_not be_nil
-      expect(paginator.current_page_first_item_offset).to be_kind_of(Fixnum)
-    end
   end
 
   context "#items_per_page=" do
-    let(:paginator) { Paginator.new(25) }
+    let(:pagination_info) { Paginator.new(25) }
 
     it "raises error when value to be set is found nil" do
       expect {
-        paginator.items_per_page = nil
+        pagination_info.items_per_page = nil
       }.to raise_error(/value must be an integer/)
     end
 
     it "raises error when value to be set is not found to be an integer value" do
       expect {
-        paginator.items_per_page = "1"
+        pagination_info.items_per_page = "1"
       }.to raise_error(/value must be an integer/)
     end
 
     it "raises error when value to be set is found 0(zero)" do
       expect {
-        paginator.items_per_page = 0
+        pagination_info.items_per_page = 0
       }.to raise_error(/value must be an integer greater than 0/)
     end
 
     it "raises error when value to be set is found LESS THAN 0(zero)" do
       expect {
-        paginator.items_per_page = -1
+        pagination_info.items_per_page = -1
       }.to raise_error(/value must be an integer greater than 0/)
     end
 
     it "correctly sets a accepted number" do
-      paginator.items_per_page = 5
-      expect(paginator.items_per_page).to eql(5)
-    end
-
-    it "re-calculates the last_page value" do
-      pinfo = Paginator.new(8)
-      expect(pinfo.last_page).to eql(1)
-
-      pinfo.items_per_page = 5
-
-      expect(pinfo.items_per_page).to eql(5)
-      expect(pinfo.last_page).to eql(2)
+      pagination_info.items_per_page = 5
+      expect(pagination_info.items_per_page).to eql(5)
     end
   end
 
-  context "#last_page" do
-    context "when total_items=9 and items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 9 }
+  context "#current_page=" do
+    let(:pagination_info) { Paginator.new(25) }
 
-      let(:paginator) { Paginator.new(total_items) }
-
-      it "returns 1" do
-        expect(paginator.last_page).to eql(1)
-      end
+    it "raises error when value to be set is found nil" do
+      expect {
+        pagination_info.current_page = nil
+      }.to raise_error(/value must be an integer/)
     end
 
-    context "when total_items=10 and items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 10 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      it "returns 1" do
-        expect(paginator.last_page).to eql(1)
-      end
+    it "raises error when value to be set is not found to be an integer value" do
+      expect {
+        pagination_info.current_page = "1"
+      }.to raise_error(/value must be an integer/)
     end
 
-    context "when total_items=11 and items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 11 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      it "returns 2" do
-        expect(paginator.last_page).to eql(2)
-      end
+    it "raises error when value to be set is found 0(zero)" do
+      expect {
+        pagination_info.current_page = 0
+      }.to raise_error(/value must be an integer greater than 0/)
     end
 
-    context "when total_items=20 and items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 20 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      it "returns 2" do
-        expect(paginator.last_page).to eql(2)
-      end
+    it "raises error when value to be set is found LESS THAN 0(zero)" do
+      expect {
+        pagination_info.current_page = -1
+      }.to raise_error(/value must be an integer greater than 0/)
     end
 
-    context "when total_items=21 and items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 21 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      it "returns 3" do
-        expect(paginator.last_page).to eql(3)
-      end
-    end
-
-    context "when total_items=35 and items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 35 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      it "returns 4" do
-        expect(paginator.last_page).to eql(4)
-      end
-    end
-
-    context "when total_items=4 and items_per_page=5" do
-      let(:total_items) { 4 }
-      let(:items_per_page) { 5 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      before do
-        paginator.items_per_page = items_per_page
-      end
-
-      it "returns 1" do
-        expect(paginator.last_page).to eql(1)
-      end
-    end
-
-    context "when total_items=6 and items_per_page=5" do
-      let(:total_items) { 6 }
-      let(:items_per_page) { 5 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      before do
-        paginator.items_per_page = items_per_page
-      end
-
-      it "returns 2" do
-        expect(paginator.last_page).to eql(2)
-      end
-    end
-
-    context "when total_items=27 and items_per_page=5" do
-      let(:total_items) { 27 }
-      let(:items_per_page) { 5 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      before do
-        paginator.items_per_page = items_per_page
-      end
-
-      it "returns 6" do
-        expect(paginator.last_page).to eql(6)
-      end
+    it "correctly sets an accepted number" do
+      pagination_info.current_page = 2
+      expect(pagination_info.current_page).to eql(2)
     end
   end
 
-  context "#next_page" do
-    context "with default items_per_page=10" do
-      context "when last_page=2 and current_page=1" do
-        let(:total_items) { 11 }
-        let(:expected_last_page) { 2 }
-        let(:current_page) { 1 }
+  context "with items_per_page set to a DEFAULT VALUE 10" do
+    let(:default_items_per_page) { 10 }
 
-        let(:paginator) { Paginator.new(total_items) }
+    before do
+      # Instead of stubbing first Paginator constant, if just stubbing
+      # the constant using following code
+      #   stub_const("Paginator::DEFAULT_ITEMS_PER_PAGE", default_items_per_page)
+      # and attaching a tag to this example and running the tagged example using --tag=<TAG_NAME>
+      # switch the spec example fails with error:
+      #   undefined method `new' for Paginator:Module
+      # Refer http://www.relishapp.com/rspec/rspec-mocks/v/3-3/docs/mutating-constants/stub-undefined-constant#stub-nested-constant
+      # why Paginator was considered as Module(instead of Class).
 
-        before do
-          expect(paginator.last_page).to eql(expected_last_page)
-          paginator.current_page = current_page
-        end
-
-        it "returns 2" do
-          expect(paginator.next_page).to eql(2)
-        end
-      end
-
-      context "when last_page=1 and current_page=1" do
-        let(:total_items) { 10 }
-        let(:expected_last_page) { 1 }
-        let(:current_page) { 1 }
-
-        let(:paginator) { Paginator.new(total_items) }
-
-        before do
-          expect(paginator.last_page).to eql(expected_last_page)
-          paginator.current_page = current_page
-        end
-
-        it "returns a symbol :#{Paginator::NO_NEXT_PAGE}" do
-          expect(paginator.next_page).to eql(Paginator::NO_NEXT_PAGE)
-        end
-      end
-
-      context "when last_page=5 and current_page=3" do
-        let(:total_items) { 50 }
-        let(:expected_last_page) { 5 }
-        let(:current_page) { 3 }
-
-        let(:paginator) { Paginator.new(total_items) }
-
-        before do
-          expect(paginator.last_page).to eql(expected_last_page)
-          paginator.current_page = current_page
-        end
-
-        it "returns 4" do
-          expect(paginator.next_page).to eql(4)
-        end
-      end
+      stub_const("Paginator", Paginator)
+      stub_const("Paginator::DEFAULT_ITEMS_PER_PAGE", default_items_per_page)
     end
 
-    context "with custom items_per_page, say items_per_page=4" do
-      let(:items_per_page) { 4 }
-
-      context "when last_page=3 and current_page=1" do
-        let(:total_items) { 11 }
-        let(:expected_last_page) { 3 }
-        let(:current_page) { 1 }
-
-        let(:paginator) { Paginator.new(total_items) }
-
-        before do
-          paginator.items_per_page = items_per_page
-          expect(paginator.last_page).to eql(expected_last_page)
-          paginator.current_page = current_page
-        end
-
-        it "returns 2" do
-          expect(paginator.next_page).to eql(2)
-        end
-      end
-
-      context "when last_page=5 and current_page=5" do
-        let(:total_items) { 18 }
-        let(:expected_last_page) { 5 }
-        let(:current_page) { 5 }
-
-        let(:paginator) { Paginator.new(total_items) }
-
-        before do
-          paginator.items_per_page = items_per_page
-          expect(paginator.last_page).to eql(expected_last_page)
-          paginator.current_page = current_page
-        end
-
-        it "returns a symbol :#{Paginator::NO_NEXT_PAGE}" do
-          expect(paginator.next_page).to eql(Paginator::NO_NEXT_PAGE)
-        end
-      end
-
-      context "when last_page=3 and current_page=2" do
-        let(:total_items) { 12 }
-        let(:expected_last_page) { 3 }
-        let(:current_page) { 2 }
-
-        let(:paginator) { Paginator.new(total_items) }
-
-        before do
-          paginator.items_per_page = items_per_page
-          expect(paginator.last_page).to eql(expected_last_page)
-          paginator.current_page = current_page
-        end
-
-        it "returns 3" do
-          expect(paginator.next_page).to eql(3)
-        end
-      end
-    end
-  end
-
-  context "#current_page_first_item_offset" do
-    context "when total_items=9, items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 9 }
-      let(:paginator) { Paginator.new(total_items) }
-
-      context "and current_page=1"do
-        before do
-          paginator.current_page = 1
-        end
-
-        it "returns 1" do
-          expect(paginator.current_page_first_item_offset).to eql(1)
-        end
-      end
-    end
-
-    context "when total_items=11, items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
-      let(:total_items) { 11 }
-
-      let(:paginator) { Paginator.new(total_items) }
-
-      context "and current_page=1"do
-        before do
-          paginator.current_page = 1
-        end
-
-        it "returns 1" do
-          expect(paginator.current_page_first_item_offset).to eql(1)
-        end
-      end
-
-      context "and current_page=2"do
-        before do
-          paginator.current_page = 2
-        end
-
-        it "returns 11" do
-          expect(paginator.current_page_first_item_offset).to eql(11)
-        end
-      end
-    end
-
-    context "when total_items=25, items_per_page=<DEFAULT SET TO #{Paginator::DEFAULT_ITEMS_PER_PAGE}>" do
+    context "and there are 25 total items available" do
       let(:total_items) { 25 }
+      let(:pagination_info) { Paginator.new(total_items) }
 
-      let(:paginator) { Paginator.new(total_items) }
-
-      context "and current_page=1"do
-        before do
-          paginator.current_page = 1
+      context ".new" do
+        it "sets total_items to 25" do
+          expect(pagination_info.total_items).to_not be_nil
+          expect(pagination_info.total_items).to eql(total_items)
         end
 
-        it "returns 1" do
-          expect(paginator.current_page_first_item_offset).to eql(1)
+        it "sets items_per_page to 10" do
+          expect(pagination_info.items_per_page).to_not be_nil
+          expect(pagination_info.items_per_page).to eql(Paginator::DEFAULT_ITEMS_PER_PAGE)
+        end
+
+        it "sets last_page to 3" do
+          expect(pagination_info.last_page).to_not be_nil
+          expect(pagination_info.last_page).to eql(3)
+        end
+
+        it "sets current_page to 1" do
+          expect(pagination_info.current_page).to_not be_nil
+          expect(pagination_info.current_page).to eql(1)
+        end
+
+        it "sets current_page_first_item_offset to 1" do
+          expect(pagination_info.current_page_first_item_offset).to_not be_nil
+          expect(pagination_info.current_page_first_item_offset).to eql(1)
+        end
+
+        it "sets next_page to 2" do
+          expect(pagination_info.next_page).to_not be_nil
+          expect(pagination_info.next_page).to eql(2)
         end
       end
 
-      context "and current_page=2"do
-        before do
-          paginator.current_page = 2
-        end
+      context "current_page" do
+        context "when set to 4" do
+          let(:expected_last_page) { 3 }
+          let(:current_page_to_be_set) { 4 }
 
-        it "returns 11" do
-          expect(paginator.current_page_first_item_offset).to eql(11)
+          before do
+            expect(pagination_info.last_page).to eql(expected_last_page)
+          end
+
+          it "raises invalid page number error" do
+            expect {
+              pagination_info.current_page = current_page_to_be_set
+            }.to raise_error(/Invalid page number \d+\. There are maximum \d+ pages/)
+          end
         end
       end
 
-      context "and current_page=3"do
-        before do
-          paginator.current_page = 3
-        end
+      context "items_per_page" do
+        context "when set to 7" do
+          let(:expected_last_page) { 4 }
+          let(:custom_items_per_page) { 7 }
 
-        it "returns 21" do
-          expect(paginator.current_page_first_item_offset).to eql(21)
+          before do
+            pagination_info.items_per_page = custom_items_per_page
+          end
+
+          it "resets the last_page value to 4" do
+            expect(pagination_info.last_page).to eql(expected_last_page)
+          end
         end
       end
     end
 
-    context "when total_items=10, items_per_page=5" do
-      let(:total_items) { 10 }
-      let(:items_per_page) { 5 }
-
-      let(:paginator) { Paginator.new(total_items) }
+    context "and there are 3 total items available" do
+      let(:total_items) { 3 }
+      let(:pagination_info) { Paginator.new(total_items) }
 
       before do
-        paginator.items_per_page = items_per_page
+        expect(pagination_info.items_per_page).to eql(Paginator::DEFAULT_ITEMS_PER_PAGE)
+        expect(pagination_info.last_page).to eql(1)
+        expect(pagination_info.current_page).to eql(1)
+        expect(pagination_info.next_page).to eql(:no_next_page)
       end
 
-      context "and current_page=1"do
-        before do
-          paginator.current_page = 1
-        end
+      context "items_per_page" do
+        context "when set to 2" do
+          let(:expected_next_page) { 2 }
+          let(:expected_last_page) { 2 }
+          let(:custom_items_per_page) { 2 }
 
-        it "returns 1" do
-          expect(paginator.current_page_first_item_offset).to eql(1)
-        end
-      end
+          before do
+            pagination_info.items_per_page = custom_items_per_page
+          end
 
-      context "and current_page=2"do
-        before do
-          paginator.current_page = 2
-        end
+          it "resets the last_page value to 2" do
+            expect(pagination_info.last_page).to eql(expected_last_page)
+          end
 
-        it "returns 6" do
-          expect(paginator.current_page_first_item_offset).to eql(6)
+          it "resets the next_page value to 2" do
+            expect(pagination_info.next_page).to eql(expected_next_page)
+          end
         end
       end
     end
 
-    context "when total_items=18, items_per_page=7" do
-      let(:total_items) { 18 }
-      let(:items_per_page) { 7 }
+    context "#last_page" do
+      it "is set to an expected value based on total items available" do
+        PaginationDataStruct = Struct.new(:total_items, :expected_last_page)
 
-      let(:paginator) { Paginator.new(total_items) }
+        pagination_data_arr = [
+          PaginationDataStruct.new(9, 1),
+          PaginationDataStruct.new(10, 1),
+          PaginationDataStruct.new(11, 2),
+          PaginationDataStruct.new(20, 2),
+          PaginationDataStruct.new(21, 3),
+          PaginationDataStruct.new(35, 4),
+        ]
 
-      before do
-        paginator.items_per_page = items_per_page
+        pagination_data_arr.each do |pagination_data|
+          pagination_info = Paginator.new(pagination_data.total_items)
+          expect(pagination_info.last_page).to eql(pagination_data.expected_last_page)
+        end
+
+        remove_constant(:PaginationDataStruct)
       end
+    end
 
-      context "and current_page=1"do
-        before do
-          paginator.current_page = 1
+    context "#next_page" do
+      it "is set to an expected value based on total_items, current_page and last_page values" do
+        PaginationDataStruct = Struct.new(:total_items, :expected_last_page, :current_page, :expected_next_page)
+
+        pagination_data_arr = [
+          PaginationDataStruct.new(11, 2, 1, 2),
+          PaginationDataStruct.new(10, 1, 1, :no_next_page),
+          PaginationDataStruct.new(50, 5, 3, 4)
+        ]
+
+        pagination_data_arr.each do |pagination_data|
+          pagination_info = Paginator.new(pagination_data.total_items)
+          expect(pagination_info.last_page).to eql(pagination_data.expected_last_page)
+          pagination_info.current_page = pagination_data.current_page
+          expect(pagination_info.next_page).to eql(pagination_data.expected_next_page)
         end
 
-        it "returns 1" do
-          expect(paginator.current_page_first_item_offset).to eql(1)
-        end
+        remove_constant(:PaginationDataStruct)
       end
+    end
 
-      context "and current_page=2"do
-        before do
-          paginator.current_page = 2
+    context "#current_page_first_item_offset" do
+      it "is set to an expected value based on total_items and current_page values" do
+        PaginationDataStruct = Struct.new(:total_items, :current_page, :expected_current_page_first_item_offset)
+
+        pagination_data_arr = [
+          PaginationDataStruct.new(9, 1, 1),
+          PaginationDataStruct.new(11, 1, 1),
+          PaginationDataStruct.new(11, 2, 11),
+          PaginationDataStruct.new(25, 1, 1),
+          PaginationDataStruct.new(25, 2, 11),
+          PaginationDataStruct.new(25, 3, 21)
+        ]
+
+        pagination_data_arr.each do |pagination_data|
+          pagination_info = Paginator.new(pagination_data.total_items)
+          pagination_info.current_page = pagination_data.current_page
+          expect(pagination_info.current_page_first_item_offset).to eql(pagination_data.expected_current_page_first_item_offset)
         end
 
-        it "returns 8" do
-          expect(paginator.current_page_first_item_offset).to eql(8)
-        end
+        remove_constant(:PaginationDataStruct)
       end
+    end
+  end
 
-      context "and current_page=3"do
-        before do
-          paginator.current_page = 3
+  context "with items_per_page changed from default 10 to a CUSTOM VALUE" do
+    context "#last_page" do
+      it "is set to an expected value based on total items available" do
+        PaginationDataStruct = Struct.new(:total_items, :items_per_page, :expected_last_page)
+
+        pagination_data_arr = [
+          PaginationDataStruct.new(9, 10, 1),
+          PaginationDataStruct.new(10, 10, 1),
+          PaginationDataStruct.new(11, 10, 2),
+          PaginationDataStruct.new(18, 5, 4),
+          PaginationDataStruct.new(35, 20, 2),
+          PaginationDataStruct.new(5, 2, 3)
+        ]
+
+        pagination_data_arr.each do |pagination_data|
+          pagination_info = Paginator.new(pagination_data.total_items)
+          pagination_info.items_per_page = pagination_data.items_per_page
+          expect(pagination_info.last_page).to eql(pagination_data.expected_last_page)
         end
 
-        it "returns 15" do
-          expect(paginator.current_page_first_item_offset).to eql(15)
+        remove_constant(:PaginationDataStruct)
+      end
+    end
+
+    context "#next_page" do
+      it "is set to an expected value based on total_items, current_page and last_page values" do
+        PaginationDataStruct = Struct.new(:total_items, :items_per_page, :expected_last_page, :current_page, :expected_next_page)
+
+        pagination_data_arr = [
+          PaginationDataStruct.new(11, 4, 3, 1, 2),
+          PaginationDataStruct.new(18, 4, 5, 5, :no_next_page),
+          PaginationDataStruct.new(12, 4, 3, 2, 3),
+        ]
+
+        pagination_data_arr.each do |pagination_data|
+          pagination_info = Paginator.new(pagination_data.total_items)
+          pagination_info.items_per_page = pagination_data.items_per_page
+          expect(pagination_info.last_page).to eql(pagination_data.expected_last_page)
+          pagination_info.current_page = pagination_data.current_page
+          expect(pagination_info.next_page).to eql(pagination_data.expected_next_page)
         end
+
+        remove_constant(:PaginationDataStruct)
+      end
+    end
+
+    context "#current_page_first_item_offset" do
+      it "is set to an expected value based on total_items and current_page values" do
+        PaginationDataStruct = Struct.new(:total_items, :items_per_page, :current_page, :expected_current_page_first_item_offset)
+
+        pagination_data_arr = [
+          PaginationDataStruct.new(10, 5, 1, 1),
+          PaginationDataStruct.new(10, 5, 2, 6),
+          PaginationDataStruct.new(18, 7, 1, 1),
+          PaginationDataStruct.new(18, 7, 2, 8),
+          PaginationDataStruct.new(18, 7, 3, 15),
+        ]
+
+        pagination_data_arr.each do |pagination_data|
+          pagination_info = Paginator.new(pagination_data.total_items)
+          pagination_info.items_per_page = pagination_data.items_per_page
+          pagination_info.current_page = pagination_data.current_page
+          expect(pagination_info.current_page_first_item_offset).to eql(pagination_data.expected_current_page_first_item_offset)
+        end
+
+        remove_constant(:PaginationDataStruct)
       end
     end
   end

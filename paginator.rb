@@ -49,6 +49,8 @@ class Paginator
   end
 
   def calculate_next_page
+    # current_page is found nil when this object is initialized and
+    # current_page= is invoked which inturn invokes this method
     return if current_page.nil?
     return NO_NEXT_PAGE if current_page == last_page
     current_page + 1
