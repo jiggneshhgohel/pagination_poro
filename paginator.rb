@@ -7,7 +7,7 @@ class Paginator
   attr_reader :current_page_first_item_offset
 
   def initialize(total_items)
-    raise_error_if_value_not_an_integer_or_less_than_or_equal_to_0(total_items, "total_items argument value")
+    raise_error_if_value_not_an_integer_or_less_than_0(total_items, "total_items argument value")
 
     @total_items = total_items
     self.items_per_page = DEFAULT_ITEMS_PER_PAGE
@@ -32,10 +32,22 @@ class Paginator
 
   private
 
-  def raise_error_if_value_not_an_integer_or_less_than_or_equal_to_0(value, error_message_prefix=:value)
+  def raise_error_if_value_not_an_integer(value, error_message_prefix=:value)
     if !value.is_a?(Fixnum)
       raise "#{error_message_prefix} must be an integer"
     end
+  end
+
+  def raise_error_if_value_not_an_integer_or_less_than_0(value, error_message_prefix=:value)
+    raise_error_if_value_not_an_integer(value, error_message_prefix)
+
+    if value < 0
+      raise "#{error_message_prefix} must be an integer greater than or equal to 0"
+    end
+  end
+
+  def raise_error_if_value_not_an_integer_or_less_than_or_equal_to_0(value, error_message_prefix=:value)
+    raise_error_if_value_not_an_integer(value, error_message_prefix)
 
     if value <= 0
       raise "#{error_message_prefix} must be an integer greater than 0"

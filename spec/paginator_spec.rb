@@ -61,16 +61,16 @@ describe Paginator do
       }.to raise_error(/total_items argument value must be an integer/)
     end
 
-    it "raises error when total_items argument value is found 0(zero)" do
+    it "doesn't raise error when total_items argument value is found 0(zero)" do
       expect {
         Paginator.new(0)
-      }.to raise_error(/total_items argument value must be an integer greater than 0/)
+      }.to_not raise_error
     end
 
     it "raises error when total_items argument value is found LESS THAN 0(zero)" do
       expect {
         Paginator.new(-1)
-      }.to raise_error(/total_items argument value must be an integer greater than 0/)
+      }.to raise_error(/total_items argument value must be an integer greater than or equal to 0/)
     end
   end
 
@@ -255,6 +255,27 @@ describe Paginator do
             expect(pagination_info.next_page).to eql(expected_next_page)
           end
         end
+      end
+    end
+
+    context "and there are no items available" do
+      let(:total_items) { 0 }
+      let(:pagination_info) { Paginator.new(total_items) }
+
+      it "sets items_per_page value to 10" do
+        expect(pagination_info.items_per_page).to eql(Paginator::DEFAULT_ITEMS_PER_PAGE)
+      end
+
+      it "sets last_page value to 1" do
+        expect(pagination_info.last_page).to eql(1)
+      end
+
+      it "sets current_page value to 1" do
+        expect(pagination_info.current_page).to eql(1)
+      end
+
+      it "sets next_page value to :no_next_page" do
+        expect(pagination_info.next_page).to eql(:no_next_page)
       end
     end
 
